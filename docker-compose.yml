@@ -6,6 +6,23 @@ services:
     container_name: aaa_health_fastapi_app
     ports:
       - "8000:8000"  # Expose FastAPI on port 8000
+    depends_on:
+      - db
+    env_file:
+      - .env  # Load variables from .env file
     volumes:
       - ./app:/app  # Sync the app directory for live code changes
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload  # Enables auto-reload for FastAPI
+
+  db:
+    image: postgres:latest
+    container_name: aaa-health-postgres_db
+    env_file:
+      - .env  # Load variables from .env file
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
