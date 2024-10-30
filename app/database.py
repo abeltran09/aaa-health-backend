@@ -1,10 +1,9 @@
 from dotenv import load_dotenv
 import os
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlmodel import SQLModel, Session, create_engine
 import logging
 
+# Load environment variables
 load_dotenv()
 
 # Fetch environment variables
@@ -20,16 +19,20 @@ SQLALCHEMY_DATABASE_URL = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DA
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-logger.info(" Starting the database connection process...")
-try:
-    
-    # GET THE CONNECTION OBJECT (ENGINE) FOR THE DATABASE
-    engine = create_engine(SQLALCHEMY_DATABASE_URL)
-    logger.info(
-        f" Connection to the {DATABASE_HOST} for user {DATABASE_USER} created successfully.")
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+logger.info("Starting the database connection process...")
 
-    Base = declarative_base()
+try:
+    # Get the connection object (engine) for the database
+    engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"options": "-csearch_path=public"})
+    logger.info(f"Connection to the {DATABASE_HOST} for user {DATABASE_USER} created successfully.")
 except Exception as ex:
-    logger.info(" Connection could not be made due to the following error: \n", ex)
+    logger.error("Connection could not be made due to the following error:", ex)
+
+def init_db():
+    SQLModel.metadata.create_all(engine)
+
+# Dependency to get the SQLModel session
+def get_db():
+    with Session(engine) as session:
+        yield session
 
