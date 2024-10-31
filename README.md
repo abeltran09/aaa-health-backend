@@ -24,19 +24,19 @@ Open your terminal and navigate to the project directory. Use the following comm
 First-time Setup:
 
 Copy code
-`docker-compose up --build`
+```docker-compose up --build```
 This command builds and starts the containers.
 
 If no changes are made and want to run container Run:
 
 Copy code
-`docker-compose up`
+```docker-compose up```
 Starts the containers without rebuilding.
 
 Shut Down the Containers:
 
 Copy code
-`docker-compose down`
+```docker-compose down```
 
 
 ### Accessing the Application
