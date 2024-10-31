@@ -1,5 +1,5 @@
 # AAA Health Backend
-This repository contains the backend setup for the AAA Health application, built with PostgreSQL and pgAdmin for database management. Follow the steps below to get started.
+This repository contains the backend setup for the AAA Health application, built with Fastapi, PostgreSQL and pgAdmin for database management. Follow the steps below to get started.
 
 ## Setup Instructions
 ### 1. Create a .env File
