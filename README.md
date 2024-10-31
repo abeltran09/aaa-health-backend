@@ -7,8 +7,8 @@ Add your credentials to the .env file by copying the template below. Replace <pa
 
 .env file:
 
-env
 Copy code
+```
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=<password>
 POSTGRES_DB=aaa-health
@@ -16,6 +16,7 @@ POSTGRES_HOST=db
 POSTGRES_PORT=5432
 PGADMIN_DEFAULT_EMAIL=<email>
 PGADMIN_DEFAULT_PASSWORD=<password>
+```
 
 ### 2. Launch the Application with Docker
 Open your terminal and navigate to the project directory. Use the following commands to manage the Docker containers:
