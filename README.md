@@ -43,7 +43,20 @@ Copy code
 ```
 docker-compose down
 ```
+### 3. Create Database Tables using alembic
 
+Make sure that the containers are running. In a seperate terminal enter this command:
+```
+docker-compose exec app alembic upgrade head
+```
+This will create 5 tables:
+```
+alembic_versions
+user
+anthropometricmeasurments
+metricbatch
+healthmetrics
+```
 
 ### Accessing the Application
 Application URL: http://127.0.0.1:8000
