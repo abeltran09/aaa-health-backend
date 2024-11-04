@@ -1,6 +1,11 @@
 # Use official Python image as base
 FROM python:3.11-slim
 
+# Install system dependencies for PostgreSQL client
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
 # Set the working directory
 WORKDIR /app
 

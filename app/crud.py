@@ -1,10 +1,10 @@
 from sqlmodel import Session, select
-from models.user import Users
+from models.models import User
 import uuid
 
 # CREATE a new user
-def create_user(db: Session, user: Users):
-    db_user = Users(
+def create_user(db: Session, user: User):
+    db_user = User(
         first_name=user.first_name,
         last_name=user.last_name,
         email=user.email,
