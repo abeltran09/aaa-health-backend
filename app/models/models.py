@@ -17,7 +17,7 @@ class User(SQLModel, table=True):
     anthropometric_measurements: Optional["AnthropometricMeasurements"] = Relationship(back_populates="user")
     metric_batch: List["MetricBatch"] = Relationship(back_populates="user")
 
-class AnthropometricMeasurments(SQLModel, table=True):
+class AnthropometricMeasurements(SQLModel, table=True):
     anthropometric_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="user.user_id", unique=True, nullable=False)
     height: str = Field(max_length=5)
