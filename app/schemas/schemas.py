@@ -14,7 +14,7 @@ class UserPublic(BaseModel):
     email: str
     phone_number: str
 
-class UserDelete(BaseModel):
+class UserAuth(BaseModel):
     email: str
     password: str
 
@@ -26,3 +26,7 @@ class UserUpdate(BaseModel):
     email: Optional[str] = None
     phone_number: Optional[str] = None
     password: Optional[str] = None
+
+class UserLogin(BaseModel):
+    first_name: str
+    last_name: str

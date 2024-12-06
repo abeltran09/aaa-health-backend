@@ -29,7 +29,7 @@ def get_user_by_email(db: Session, email: str) -> User | None:
     else:
         return session_user
 
-def delete_user(db: Session, user: UserDelete):
+def delete_user(db: Session, user: UserAuth):
     statement = select(User).where(User.email == user.email)
     session_user = db.exec(statement).first()
 
