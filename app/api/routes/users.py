@@ -5,6 +5,7 @@ from models.models import User
 from sqlmodel import Session
 from typing import Annotated, Optional
 from schemas.schemas import *
+import auth
 
 router = APIRouter()
 
@@ -38,6 +39,28 @@ def create_user(
         raise HTTPException(status_code=409, detail="This user email already exists")
     return user
 
+@router.post("/login-user/", response_model=UserLogin)
+def login_user(
+    email: Annotated[str, Form()],
+    password: Annotated[str, Form()],
+    db: Session = Depends(get_db)
+    ):
+
+    user_data = UserAuth(
+        email=email,
+        password=password
+    )
+
+    user = auth.login(db, user_data)
+
+    if user is None:
+        raise HTTPException(status_code=401, detail="Incorrect password was entered, make sure you typed correctly")
+    return user
+
+
+
+
+
 @router.delete("/delete-user/", response_model=UserPublic)
 def delete_user(
     email: Annotated[str, Form()],
@@ -45,7 +68,7 @@ def delete_user(
     db: Session = Depends(get_db)
     ):
 
-    user_data = UserUpdate(
+    user_data = UserAuth(
         email=email,
         password=password
     )
