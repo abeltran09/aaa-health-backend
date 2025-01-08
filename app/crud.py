@@ -3,6 +3,7 @@ from models.models import User
 import uuid
 import auth
 from schemas.schemas import *
+from datetime import datetime
 
 def create_user(db: Session, user: UserCreate):
     if get_user_by_email(db, user.email) is not None:
@@ -43,16 +44,37 @@ def delete_user(db: Session, user: UserAuth):
     return session_user
 
 
-def update_user(db: Session, user: UserUpdate):
+def update_password(db: Session, user: UserUpdate):
     db_user = get_user_by_email(db, user.current_email)
 
     if db_user is None:
-        return None
+        return False
 
     verify_password = auth.verify_password(user.current_password, db_user.password_hash)
 
     if verify_password is False:
         return False
+
+    confirm_passwords = auth.confirm_matching_passwords(user.new_password, user.confirm_new_password)
+
+    if confirm_passwords is False:
+        return False
+    
+    
+    db_user.password_hash = auth.hash_password(user.new_password)
+
+    db_user.updated_at = user.updated_at
+
+    db.commit()
+    db.refresh(db_user)
+
+    return db_user
+
+def edit_profile(db: Session, user: EditProfile):
+    db_user = get_user_by_email(db, user.old_email)
+
+    if db_user is None:
+        return None
     
     if user.first_name is not None:
         db_user.first_name = user.first_name
@@ -62,8 +84,8 @@ def update_user(db: Session, user: UserUpdate):
         db_user.email = user.email
     if user.phone_number is not None:
         db_user.phone_number = user.phone_number
-    if user.password is not None:
-        db_user.password_hash = auth.hash_password(user.password)
+
+    db_user.updated_at = user.updated_at
 
     db.commit()
     db.refresh(db_user)
