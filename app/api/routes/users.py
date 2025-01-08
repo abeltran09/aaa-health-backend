@@ -6,6 +6,7 @@ from sqlmodel import Session
 from typing import Annotated, Optional
 from schemas.schemas import *
 import auth
+from datetime import datetime
 
 router = APIRouter()
 
@@ -39,7 +40,7 @@ def create_user(
         raise HTTPException(status_code=409, detail="This user email already exists")
     return user
 
-@router.post("/login-user/", response_model=UserLogin)
+@router.post("/login-user/", response_model=UserPublic)
 def login_user(
     email: Annotated[str, Form()],
     password: Annotated[str, Form()],
@@ -56,8 +57,6 @@ def login_user(
     if user is None:
         raise HTTPException(status_code=401, detail="Incorrect password was entered, make sure you typed correctly")
     return user
-
-
 
 
 
@@ -83,31 +82,48 @@ def delete_user(
 @router.put("/update-user-password/", response_model=UserPublic)
 def update_user(
     current_email: Annotated[str, Form()],
-    current_password: Annotated[str, Form()],
-    new_first_name: Annotated[Optional[str], Form()] = None, 
-    new_last_name: Annotated[Optional[str], Form()] = None, 
-    new_email: Annotated[Optional[str], Form()] = None, 
-    new_phone_number: Annotated[Optional[str], Form()] = None,
-    new_password: Annotated[Optional[str], Form()] = None, 
+    old_password: Annotated[str, Form()],
+    new_password: Annotated[str, Form()],
+    confirm_new_password: Annotated[str, Form()],
+    updated_at: datetime = datetime.utcnow(),
     db: Session = Depends(get_db)
     ):
 
     user_data = UserUpdate(
         current_email=current_email,
-        current_password=current_password,
+        current_password=old_password,
+        new_password=new_password,
+        confirm_new_password=confirm_new_password,
+        updated_at=updated_at
+    )
+
+    user = crud.update_password(db=db, user=user_data)
+
+    if user is False:
+        raise HTTPException(status_code=401, detail="Incorrect password was entered, make sure you typed correctly")
+
+    return user
+
+@router.put("/edit-profile/", response_model=UserPublic)
+def edit_user_profile(
+    current_email: Annotated[str, Form()],
+    updated_at: datetime = datetime.utcnow(),
+    new_first_name: Annotated[Optional[str], Form()] = None, 
+    new_last_name: Annotated[Optional[str], Form()] = None, 
+    new_email: Annotated[Optional[str], Form()] = None, 
+    new_phone_number: Annotated[Optional[str], Form()] = None,
+    db: Session = Depends(get_db)
+    ):
+
+    user_data = EditProfile(
         first_name=new_first_name,
         last_name=new_last_name,
         email=new_email,
         phone_number=new_phone_number,
-        password=new_password
+        old_email=current_email,
+        updated_at=updated_at
     )
 
-    user = crud.update_user(db=db, user=user_data)
-
-    if user is None:
-        raise HTTPException(status_code=409, detail="This user email does not exist, make sure you typed correctly")
-
-    if user is False:
-        raise HTTPException(status_code=401, detail="Incorrect password was entered, make sure you typed correctly")
+    user = crud.edit_profile(db=db, user=user_data)
 
     return user

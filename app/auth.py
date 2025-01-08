@@ -16,3 +16,9 @@ def login(db, user_data):
     if verify_password(user_data.password, user.password_hash):
         return user
     return None
+
+def confirm_matching_passwords(new_password, confirm_new_password):
+    if new_password == confirm_new_password:
+        return True
+    else:
+        False
