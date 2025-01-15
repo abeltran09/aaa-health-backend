@@ -13,6 +13,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def login(db, user_data):
     user = crud.get_user_by_email(db=db, email=user_data.email)
+    if user is None:
+        return None
     if verify_password(user_data.password, user.password_hash):
         return user
     return None
