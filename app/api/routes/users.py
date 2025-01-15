@@ -55,7 +55,7 @@ def login_user(
     user = auth.login(db, user_data)
 
     if user is None:
-        raise HTTPException(status_code=401, detail="Incorrect password was entered, make sure you typed correctly")
+        raise HTTPException(status_code=401, detail="Incorrect email or password was entered, make sure you typed correctly")
     return user
 
 
