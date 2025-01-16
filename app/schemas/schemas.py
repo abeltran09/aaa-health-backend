@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
+import uuid
 
 class UserCreate(BaseModel):
     first_name: str
@@ -37,3 +38,8 @@ class EditProfile(BaseModel):
     phone_number: Optional[str] = None
     old_email: str
     updated_at: datetime
+
+class Measurments(BaseModel):
+    user_id: uuid.UUID
+    weight: str
+    height: str
