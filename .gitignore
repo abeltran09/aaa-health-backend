@@ -2,3 +2,4 @@
 .env
 **/__pycache__/
 common_commands.txt
+*.pyc
