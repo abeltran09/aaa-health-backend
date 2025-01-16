@@ -1,5 +1,5 @@
 from sqlmodel import Session, select
-from models.models import User
+from models.models import User, AnthropometricMeasurement
 import uuid
 import auth
 from schemas.schemas import *
@@ -91,3 +91,26 @@ def edit_profile(db: Session, user: EditProfile):
     db.refresh(db_user)
 
     return db_user
+
+def get_user_id(db: Session, email):
+    db_user = get_user_by_email(db, email)
+
+    if db_user is None:
+        return None
+
+    user_id = select(db_user.user_id).where(db_user.email == email)
+
+    return user_id
+
+def add_anthropometrics(db: Session, data: Measurements):
+    new_measurements = AnthropometricMeasurement(
+        user_id=data.user_id,
+        height=data.height,
+        weight=weight
+    )
+
+    db.add(new_measurements)
+    db.commit()
+    db.refresh()
+    
+    return "Successful"
