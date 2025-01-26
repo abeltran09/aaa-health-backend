@@ -22,8 +22,6 @@ class AnthropometricMeasurements(SQLModel, table=True):
     user_id: uuid.UUID = Field(foreign_key="user.user_id", unique=True, nullable=False)
     height: str = Field(max_length=5)
     weight: str = Field(max_length=3)
-    sex: str = Field(max_length=6)
-
     # Relationship with Users
     user: Optional[User] = Relationship(back_populates="anthropometric_measurements")
 
