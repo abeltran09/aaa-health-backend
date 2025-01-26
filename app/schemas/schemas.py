@@ -39,7 +39,7 @@ class EditProfile(BaseModel):
     old_email: str
     updated_at: datetime
 
-class Measurments(BaseModel):
+class Measurements(BaseModel):
     user_id: uuid.UUID
     weight: str
     height: str

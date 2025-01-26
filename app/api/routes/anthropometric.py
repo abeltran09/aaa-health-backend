@@ -15,24 +15,24 @@ def get_weight(
     weight: Annotated[str, Form()],
     height: Annotated[str, Form()],
     email: Annotated[str, Form()],
-    db: Session = Depends(get_db())
+    db: Session = Depends(get_db)
     ):
 
-    user_id = crud.get_user_id(db=db, email)
+    user_id = crud.get_user_id(db=db, email=email)
 
     if user_id is None:
         return "error getting user_id"
 
-    measurment_data = Measurments(
+    measurment_data = Measurements(
         user_id=user_id,
         weight=weight,
         height=height
     )
 
-    anthropometric = crud.add_anthropometrics(db=db, measurments=measurment_data)
+    anthropometric = crud.add_anthropometrics(db=db, data=measurment_data)
 
     if anthropometric == "Successful":
-        return
+        return "Measurments were succesfully Entered"
 
     return "Measurements Entered were went wrong"
 

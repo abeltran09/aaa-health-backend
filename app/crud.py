@@ -1,20 +1,23 @@
 from sqlmodel import Session, select
-from models.models import User, AnthropometricMeasurement
+from models.models import User, AnthropometricMeasurements
 import uuid
 import auth
 from schemas.schemas import *
 from datetime import datetime
+from helper.userinputhelper import *
 
 def create_user(db: Session, user: UserCreate):
     if get_user_by_email(db, user.email) is not None:
         return None
+    
+    clean_number = format_phone_number(user.phone_number)
 
     hashed_password = auth.hash_password(user.password)
     db_user = User(
-        first_name=user.first_name,
-        last_name=user.last_name,
-        email=user.email,
-        phone_number=user.phone_number,
+        first_name=user.first_name.capitalize(),
+        last_name=user.last_name.capitalize(),
+        email=user.email.lower(),
+        phone_number=clean_number,
         password_hash=hashed_password
     )
     db.add(db_user)
@@ -98,19 +101,19 @@ def get_user_id(db: Session, email):
     if db_user is None:
         return None
 
-    user_id = select(db_user.user_id).where(db_user.email == email)
-
-    return user_id
+    return db_user.user_id
 
 def add_anthropometrics(db: Session, data: Measurements):
-    new_measurements = AnthropometricMeasurement(
+    clean_height = format_height(data.height)
+
+    new_measurements = AnthropometricMeasurements(
         user_id=data.user_id,
-        height=data.height,
-        weight=weight
+        height=clean_height,
+        weight=data.weight
     )
 
     db.add(new_measurements)
     db.commit()
-    db.refresh()
+    db.refresh(new_measurements)
     
     return "Successful"
