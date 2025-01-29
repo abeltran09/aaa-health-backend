@@ -51,21 +51,20 @@ def update_password(db: Session, user: UserUpdate):
     db_user = get_user_by_email(db, user.current_email)
 
     if db_user is None:
-        return False
+        return PasswordUpdateError.USER_NOT_FOUND
 
     verify_password = auth.verify_password(user.current_password, db_user.password_hash)
 
     if verify_password is False:
-        return False
+        return PasswordUpdateError.INCORRECT_PASSWORD
 
     confirm_passwords = auth.confirm_matching_passwords(user.new_password, user.confirm_new_password)
 
     if confirm_passwords is False:
-        return False
+        return PasswordUpdateError.PASSWORDS_DONT_MATCH
     
     
     db_user.password_hash = auth.hash_password(user.new_password)
-
     db_user.updated_at = user.updated_at
 
     db.commit()

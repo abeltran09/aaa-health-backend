@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 import uuid
+from enum import Enum
 
 class UserCreate(BaseModel):
     first_name: str
@@ -43,3 +44,17 @@ class Measurements(BaseModel):
     user_id: uuid.UUID
     weight: str
     height: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class PasswordUpdateError(str, Enum):
+    INCORRECT_PASSWORD = "incorrect_old_password"
+    PASSWORDS_DONT_MATCH = "passwords_dont_match"
+    USER_NOT_FOUND = "user_not_found"
+
+class PasswordUpdateResponse(BaseModel):
+    success: bool
+    error: Optional[PasswordUpdateError] = None
+    user: Optional[UserPublic] = None
