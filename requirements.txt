@@ -9,3 +9,4 @@ sqlmodel==0.0.22
 alembic==1.13.3
 python-multipart==0.0.17
 python-jose[cryptography]==3.3.0
+websockets==11.0.1
