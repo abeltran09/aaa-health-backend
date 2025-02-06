@@ -58,3 +58,13 @@ class PasswordUpdateResponse(BaseModel):
     success: bool
     error: Optional[PasswordUpdateError] = None
     user: Optional[UserPublic] = None
+
+class MetricBatch(BaseModel):
+    user_id: uuid.UUID
+    recorded_at: datetime
+
+class HealthMetric(BaseModel):
+    batch_id: uuid.UUID
+    metric_type: str
+    value: float
+    unit: str
