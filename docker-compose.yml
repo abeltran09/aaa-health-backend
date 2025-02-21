@@ -1,19 +1,4 @@
 services:
-  app:
-    build:
-      context: .
-      dockerfile: ./app/Dockerfile
-    container_name: aaa_health_fastapi_app
-    ports:
-      - "8000:8000" # Expose FastAPI on port 8000
-    depends_on:
-      - db
-    env_file:
-      - .env # Load variables from .env file
-    volumes:
-      - ./app:/app # Sync the app directory for live code changes
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload # Enables auto-reload for FastAPI
-
   db:
     image: postgres:latest
     container_name: aaa-health-postgres_db
@@ -23,6 +8,30 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data # Reference the named volume
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  
+  airflow-db:
+    image: postgres:latest
+    container_name: aaa-health-airflow_db
+    env_file:
+      - .env
+    ports:
+      - "5433:5432"
+    volumes:
+      - airflow_postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${AIRFLOW_DB_USER}
+      - POSTGRES_PASSWORD=${AIRFLOW_DB_PASSWORD}
+      - POSTGRES_DB=${AIRFLOW_DB}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AIRFLOW_DB_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   pgadmin:
     image: dpage/pgadmin4
@@ -36,7 +45,91 @@ services:
       - pgadmin-data:/var/lib/pgadmin
     depends_on:
     - db
+    - airflow-db
+
+  app:
+    build:
+      context: .
+      dockerfile: ./app/Dockerfile
+    container_name: aaa_health_fastapi_app
+    ports:
+      - "8000:8000" # Expose FastAPI on port 8000
+    env_file:
+      - .env # Load variables from .env file
+    volumes:
+      - ./app:/app # Sync the app directory for live code changes
+    command: >
+      bash -c "
+      alembic upgrade head && 
+      uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      "
+    depends_on:
+      db:
+        condition: service_healthy
+
+  airflow-webserver:
+    image: apache/airflow:2.8.1
+    container_name: aaa-health-airflow-webserver
+    command: webserver
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@airflow-db/${AIRFLOW_DB}
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/requirements.txt:/opt/airflow/requirements.txt
+    depends_on:
+      airflow-db:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    image: apache/airflow:2.8.1
+    container_name: aaa-health-airflow-scheduler
+    command: scheduler
+    env_file:
+      - .env
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@airflow-db/${AIRFLOW_DB}
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/requirements.txt:/opt/airflow/requirements.txt
+    depends_on:
+      airflow-db:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-init:
+    image: apache/airflow:2.8.1
+    container_name: aaa-health-airflow-init
+    command: version
+    env_file:
+      - .env
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@airflow-db/${AIRFLOW_DB}
+      - _AIRFLOW_DB_MIGRATE=true
+      - _AIRFLOW_WWW_USER_CREATE=true
+      - _AIRFLOW_WWW_USER_USERNAME=${AIRFLOW_USER}
+      - _AIRFLOW_WWW_USER_PASSWORD=${AIRFLOW_PASSWORD}
+    volumes:
+      - ./airflow/requirements.txt:/opt/airflow/requirements.txt
+    depends_on:
+      - airflow-db
 
 volumes:
   postgres_data:
+  airflow_postgres_data:
   pgadmin-data:
