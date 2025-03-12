@@ -9,6 +9,7 @@ from api.routes.users import get_current_user
 import uuid
 import json
 from datetime import datetime, timedelta
+from schemas.schemas import UserIdRequest
 
 router = APIRouter()
 
@@ -16,6 +17,34 @@ manager = ConnectionManager()
 
 BATCH_TIME_LIMIT = timedelta(seconds=5)  # Adjust based on real-world needs
 BATCH_SIZE_LIMIT = 10  # Number of metrics per batch before committing
+
+# Store active WebSocket connections
+active_connections = {}
+
+@router.post("/set-user-id/")
+async def set_user_id(request: UserIdRequest):
+    """
+    Endpoint for frontend to set the user ID on the ESP32 device
+    """
+    try:
+        user_id = uuid.UUID(request.user_id)
+        
+        # Check if ESP32 is connected
+        if not manager.active_connections:
+            raise HTTPException(status_code=503, detail="No ESP32 devices connected")
+        
+        # Send user_id to all connected ESP32 devices
+        # need to send user to target a specific device !! needs work but works
+        message = json.dumps({"user_id": str(user_id)})
+        for connection in manager.active_connections:
+            await connection.send_text(message)
+            
+        return {"status": "success", "message": f"User ID {user_id} sent to ESP32"}
+    
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid UUID format")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 @router.websocket("/communicate")
 async def websocket_endpoint(websocket: WebSocket):

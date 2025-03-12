@@ -13,6 +13,7 @@ class UserCreate(BaseModel):
     password: str
 
 class UserPublic(BaseModel):
+    user_id: uuid.UUID
     first_name: str
     last_name: str
     email: str
@@ -69,3 +70,6 @@ class HealthMetric(BaseModel):
     metric_type: str
     value: float
     unit: str
+
+class UserIdRequest(BaseModel):
+    user_id: str
