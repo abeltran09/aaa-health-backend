@@ -1,8 +1,9 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Union
 from datetime import datetime
 import uuid
 from enum import Enum
+from models.models import User
 
 class UserCreate(BaseModel):
     first_name: str
