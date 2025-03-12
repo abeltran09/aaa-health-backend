@@ -70,7 +70,14 @@ def update_password(db: Session, user: UserUpdate):
     db.commit()
     db.refresh(db_user)
 
-    return db_user
+    user_public = UserPublic(
+        first_name=db_user.first_name,
+        last_name=db_user.last_name,
+        email=db_user.email,
+        phone_number=db_user.phone_number
+    )
+    
+    return user_public
 
 def edit_profile(db: Session, user: EditProfile):
     db_user = get_user_by_email(db, user.old_email)
