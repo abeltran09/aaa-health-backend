@@ -1,4 +1,5 @@
 from fastapi import WebSocket
+from starlette.websockets import WebSocketState
 
 class ConnectionManager:
     def __init__(self):
@@ -12,4 +13,9 @@ class ConnectionManager:
         self.active_connections.remove(websocket)
 
     async def send_message(self, message: str, websocket: WebSocket):
-        await websocket.send_text(message)
+        if websocket.client_state == WebSocketState.CONNECTED:
+            try:
+                await websocket.send_text(message)
+            except RuntimeError:
+                print(f"Could not send message, connection may be closed")
+                self.disconnect(websocket)

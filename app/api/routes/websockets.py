@@ -74,4 +74,17 @@ async def websocket_batch_endpoint(websocket: WebSocket, db: Session = Depends(g
                 await websocket.send_text(f"Received {len(health_metrics)} metrics for user {user_id}.")
 
     except WebSocketDisconnect:
-         await manager.send_message("Bye!! Communication Terminated", websocket)
+        # Log the disconnect but don't try to send a message
+        print(f"WebSocket disconnected: Client left the connection")
+    finally:
+        # Always remove the connection from active connections
+        manager.disconnect(websocket)
+
+'''
+{
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "metrics": [
+    {"metric_type": "temperature", "value": 36.5, "unit": "C", "recorded_at": "2025-02-18T14:30:10"}
+  ]
+}
+'''
