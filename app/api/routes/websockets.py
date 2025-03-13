@@ -1,4 +1,4 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from helper.websocketmanager import ConnectionManager
 from helper.websocketdatahandler import * 
 from database import get_db
@@ -15,17 +15,14 @@ router = APIRouter()
 
 manager = ConnectionManager()
 
-BATCH_TIME_LIMIT = timedelta(seconds=5)  # Adjust based on real-world needs
-BATCH_SIZE_LIMIT = 10  # Number of metrics per batch before committing
+BATCH_TIME_LIMIT = timedelta(seconds=5)
+BATCH_SIZE_LIMIT = 10  
 
 # Store active WebSocket connections
 active_connections = {}
 
 @router.post("/set-user-id/")
 async def set_user_id(request: UserIdRequest):
-    """
-    Endpoint for frontend to set the user ID on the ESP32 device
-    """
     try:
         user_id = uuid.UUID(request.user_id)
         
@@ -46,16 +43,26 @@ async def set_user_id(request: UserIdRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
-@router.websocket("/communicate")
-async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
+@router.post("/disconnect-device/")
+async def disconnect_device(request: UserIdRequest):
     try:
-        while True:
-            data = await websocket.receive_text()
-            await manager.send_message(f"Hey there! Connection Made :) Recieved: {data}", websocket)
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-        await manager.send_message("Bye!! Communication Terminated", websocket)
+        user_id = uuid.UUID(request.user_id)
+        
+        # Check if ESP32 is connected
+        if not manager.active_connections:
+            raise HTTPException(status_code=503, detail="No ESP32 devices connected")
+        
+        # Send disconnect command to all connected ESP32 devices
+        message = json.dumps({"command": "disconnect", "user_id": str(user_id)})
+        for connection in manager.active_connections:
+            await connection.send_text(message)
+            
+        return {"status": "success", "message": f"Disconnect command sent for User ID {user_id}"}
+    
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid UUID format")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 @router.websocket("/recive-health-batch")
 async def websocket_batch_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
