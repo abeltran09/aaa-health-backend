@@ -1,6 +1,6 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from helper.websocketmanager import ConnectionManager
-from helper.websocketdatahandler import * 
+from helper.websocketdatahandler import aggregate_health_metrics, notify_frontend_clients
 from database import get_db
 from sqlmodel import Session
 from models.models import MetricBatch, HealthMetrics
@@ -68,6 +68,9 @@ async def disconnect_device(request: UserIdRequest):
 async def websocket_batch_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
     await manager.connect(websocket)
 
+    connection_id = id(websocket)
+    user_connection = None
+
     batch_metrics = []  
     last_batch_time = datetime.utcnow() 
 
@@ -78,6 +81,11 @@ async def websocket_batch_endpoint(websocket: WebSocket, db: Session = Depends(g
             
             user_id = uuid.UUID(data["user_id"])
             metrics = data["metrics"]
+
+            # Store user connection for frontend notifications
+            if not user_connection:
+                user_connection = user_id
+                active_connections[connection_id] = {"websocket": websocket, "user_id": user_id}
 
             batch_metrics.extend(metrics)
 
@@ -104,6 +112,10 @@ async def websocket_batch_endpoint(websocket: WebSocket, db: Session = Depends(g
                 db.bulk_save_objects(health_metrics)
                 db.commit()
 
+                aggregated_data = aggregate_health_metrics(db, user_id)
+
+                await notify_frontend_clients(user_id, aggregated_data, active_connections)
+
                 batch_metrics = []
                 last_batch_time = datetime.utcnow()
 
@@ -114,6 +126,49 @@ async def websocket_batch_endpoint(websocket: WebSocket, db: Session = Depends(g
         print(f"WebSocket disconnected: Client left the connection")
     finally:
         # Always remove the connection from active connections
+        if connection_id in active_connections:
+            del active_connections[connection_id]
+        manager.disconnect(websocket)
+
+
+@router.websocket("/frontend-updates")
+async def frontend_websocket_endpoint(
+    websocket: WebSocket, 
+    db: Session = Depends(get_db)
+    ):
+    await manager.connect(websocket)
+    query_params = websocket.query_params
+    user_id = query_params.get("user_id")
+
+    if not user_id:
+        print("WebSocket connection closed: user_id is missing")  # Log missing user_id
+        await websocket.close()
+        return
+    
+    try:
+        user_uuid = uuid.UUID(user_id)
+        connection_id = id(websocket)
+        active_connections[connection_id] = {"websocket": websocket, "user_id": user_uuid, "type": "frontend"}
+        
+        # Send initial data
+        initial_data = aggregate_health_metrics(db, user_uuid)
+        await websocket.send_text(json.dumps({
+            "type": "metrics_update",
+            "data": initial_data
+        }))
+        
+        # Keep connection alive
+        while True:
+            # Wait for any message (including ping/pong)
+            await websocket.receive_text()
+            
+    except WebSocketDisconnect:
+        print(f"Frontend WebSocket disconnected: {connection_id}")
+    except ValueError:
+        print(f"Invalid user_id in WebSocket connection")
+    finally:
+        if connection_id in active_connections:
+            del active_connections[connection_id]
         manager.disconnect(websocket)
 
 '''

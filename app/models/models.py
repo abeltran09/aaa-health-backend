@@ -43,3 +43,23 @@ class HealthMetrics(SQLModel, table=True):
 
     # Relationship with MetricBatch
     metric_batch: Optional[MetricBatch] = Relationship(back_populates="health_metrics")
+
+
+class AggregatedHealthMetrics(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
+    user_id: uuid.UUID = Field(foreign_key="user.user_id", nullable=False, index=True)
+    date: datetime = Field(default_factory=lambda: datetime.now().replace(hour=0, minute=0, second=0, microsecond=0))
+    last_updated: datetime = Field(default_factory=datetime.utcnow)
+
+    # Step metrics
+    steps: Optional[int] = Field(default=0)
+
+    # Heart rate metrics
+    current_heart_rate: Optional[float] = Field(default=None)
+    avg_heart_rate: Optional[float] = Field(default=None)
+    min_heart_rate: Optional[float] = Field(default=None)
+    max_heart_rate: Optional[float] = Field(default=None)
+    heart_rate_variability: Optional[float] = Field(default=None)
+
+    # Calorie metrics
+    calories_burned: Optional[float] = Field(default=0.0)
