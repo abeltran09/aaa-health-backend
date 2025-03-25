@@ -60,6 +60,8 @@ class AggregatedHealthMetrics(SQLModel, table=True):
     min_heart_rate: Optional[float] = Field(default=None)
     max_heart_rate: Optional[float] = Field(default=None)
     heart_rate_variability: Optional[float] = Field(default=None)
+    inter_beat_interval: Optional[float] = Field(default=None)
+    respiratory_rate: Optional[float] = Field(default=None)
 
     # Calorie metrics
     calories_burned: Optional[float] = Field(default=0.0)
