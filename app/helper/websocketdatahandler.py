@@ -25,7 +25,7 @@ def aggregate_health_metrics(db: Session, user_id: uuid.UUID):
 
     print(f"Aggregating metrics for user {user_id}, from {one_day_ago}")
     
-    # SQL query to get heart rate metrics
+    # SQL query to get heart rate metrics including the most recent value
     sql_query = text("""
     SELECT 
         COALESCE(AVG(hm.value), 0) as avg_heart_rate,
@@ -45,11 +45,45 @@ def aggregate_health_metrics(db: Session, user_id: uuid.UUID):
         "one_day_ago": one_day_ago
     }).first()
     
-   
+    # SQL query to get the current/most recent heart rate
+    current_hr_query = text("""
+    SELECT 
+        hm.value as current_heart_rate
+    FROM 
+        healthmetrics hm
+    JOIN metricbatch mb ON 
+        mb.batch_id = hm.batch_id
+    WHERE 
+        mb.user_id = :user_id
+    ORDER BY 
+        mb.recorded_at DESC
+    LIMIT 1
+    """)
+    
+    current_hr_result = db.execute(current_hr_query, {
+        "user_id": user_id
+    }).first()
+    
+    # Get the heart rate values from the query results
+    avg_heart_rate = float(result.avg_heart_rate) if result and result.avg_heart_rate else 0
+    min_heart_rate = float(result.min_heart_rate) if result and result.min_heart_rate else 0
+    max_heart_rate = float(result.max_heart_rate) if result and result.max_heart_rate else 0
+    current_heart_rate = float(current_hr_result.current_heart_rate) if current_hr_result and current_hr_result.current_heart_rate else 0
+    
+    # Calculate new metrics
+    respiratory_rate = avg_heart_rate / 4 if avg_heart_rate > 0 else 0
+    
+    # For Inter-beat interval (IBI), we use the current heart rate
+    # IBI is measured in milliseconds, calculated as 60,000 / heart_rate
+    inter_beat_interval = 60000 / current_heart_rate if current_heart_rate > 0 else 0
+    
     aggregated_results = {
-        "avg_heart_rate": float(result.avg_heart_rate) if result and result.avg_heart_rate else 0,
-        "min_heart_rate": float(result.min_heart_rate) if result and result.min_heart_rate else 0,
-        "max_heart_rate": float(result.max_heart_rate) if result and result.max_heart_rate else 0
+        "avg_heart_rate": avg_heart_rate,
+        "min_heart_rate": min_heart_rate,
+        "max_heart_rate": max_heart_rate,
+        "current_heart_rate": current_heart_rate,
+        "respiratory_rate": respiratory_rate,
+        "inter_beat_interval": inter_beat_interval
     }
     
     # Update or insert into aggregated metrics table
@@ -72,7 +106,6 @@ def aggregate_health_metrics(db: Session, user_id: uuid.UUID):
         )
         db.add(new_aggregate)
         db.commit()
-
 
     print(f"Aggregated results: {aggregated_results}")
     return aggregated_results
