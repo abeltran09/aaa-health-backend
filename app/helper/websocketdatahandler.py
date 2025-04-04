@@ -135,7 +135,7 @@ def aggregate_health_metrics(db: Session, user_id: uuid.UUID):
     # Get previous HRV values from the last 7 days
     avg_hrv_query = text("""
     SELECT 
-        heart_rate_variability
+        AVG(heart_rate_variability) as avg_heart_rate_variability
     FROM 
         aggregatedhealthmetrics
     WHERE 
@@ -144,20 +144,14 @@ def aggregate_health_metrics(db: Session, user_id: uuid.UUID):
         AND date < :today
     """)
     
-    avg_hrv_results = db.execute(avg_hrv_query, {
+    avg_hrv_result = db.execute(avg_hrv_query, {
         "user_id": user_id,
         "seven_days_ago": seven_days_ago,
         "today": today
-    }).fetchall()
+    }).first()
     
-    # Calculate average HRV over the past week plus today's value
-    hrv_values = [row.heart_rate_variability for row in avg_hrv_results if row.heart_rate_variability]
-    if heart_rate_variability > 0:
-        hrv_values.append(heart_rate_variability)
-    
-    avg_heart_rate_variability = 0
-    if hrv_values:
-        avg_heart_rate_variability = sum(hrv_values) / len(hrv_values)
+    # Get the average HRV from the query result
+    avg_heart_rate_variability = float(avg_hrv_result.avg_heart_rate_variability) if avg_hrv_result and avg_hrv_result.avg_heart_rate_variability else 0
     
     # Combine all metrics in the aggregated results
     aggregated_results = {
