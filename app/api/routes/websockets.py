@@ -1,6 +1,6 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from helper.websocketmanager import ConnectionManager
-from helper.websocketdatahandler import aggregate_health_metrics, notify_frontend_clients
+from helper.websocketdatahandler import aggregate_health_metrics, notify_frontend_clients, aggregate_daily_hourly_metrics, notify_daily_metrics
 from database import get_db
 from sqlmodel import Session
 from models.models import MetricBatch, HealthMetrics
@@ -113,8 +113,10 @@ async def websocket_batch_endpoint(websocket: WebSocket, db: Session = Depends(g
                 db.commit()
 
                 aggregated_data = aggregate_health_metrics(db, user_id)
-
                 await notify_frontend_clients(user_id, aggregated_data, active_connections)
+
+                daily_data = aggregate_daily_hourly_metrics(db, user_id)
+                await notify_daily_metrics(user_id, daily_data, active_connections)
 
                 batch_metrics = []
                 last_batch_time = datetime.utcnow()
@@ -160,6 +162,45 @@ async def frontend_websocket_endpoint(
         # Keep connection alive
         while True:
             # Wait for any message (including ping/pong)
+            await websocket.receive_text()
+            
+    except WebSocketDisconnect:
+        print(f"Frontend WebSocket disconnected: {connection_id}")
+    except ValueError:
+        print(f"Invalid user_id in WebSocket connection")
+    finally:
+        if connection_id in active_connections:
+            del active_connections[connection_id]
+        manager.disconnect(websocket)
+
+@router.websocket("/daily-updates")
+async def daily_websocket_endpoint(
+    websocket: WebSocket, 
+    db: Session = Depends(get_db)
+    ):
+    await manager.connect(websocket)
+    query_params = websocket.query_params
+    user_id = query_params.get("user_id")
+
+    if not user_id:
+        print("WebSocket connection closed: user_id is missing")
+        await websocket.close()
+        return
+    
+    try:
+        user_uuid = uuid.UUID(user_id)
+        connection_id = id(websocket)
+        active_connections[connection_id] = {"websocket": websocket, "user_id": user_uuid, "type": "frontend"}
+        
+        # Send initial data
+        initial_data = aggregate_daily_hourly_metrics(db, user_uuid)
+        await websocket.send_text(json.dumps({
+            "type": "daily_metrics_update",
+            "data": initial_data
+        }))
+        
+        # Keep connection alive
+        while True:
             await websocket.receive_text()
             
     except WebSocketDisconnect:
